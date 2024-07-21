@@ -1,0 +1,48 @@
+---
+kind: kubernetes
+app: &app_name localdevpythonapp
+type: web
+team: apacappenablement
+docker_image: *app_name
+healthcheck:
+  path: /python/api/v1/utils/health
+container_port: 7001
+internal: true
+replicas: 1
+dns:
+  zone: cglcloud
+  name: *app_name
+security:
+  default:
+    read_only_root_filesystem: false
+    cap_drop_net_raw: true
+    run_as_non_root: true
+    allow_privilege_escalation: false
+database:
+  type: postgres
+  # flyway_path: scripts/flyway/sql
+storage:
+  s3:
+    mystorage:
+# These headers will ensure swaggerUI is working correctly
+headers:
+  csp:
+    default:
+      script-src:
+        self: true
+        unsafe-inline: true
+        blob: true
+        sources:
+          - https://cdn.jsdelivr.net
+      style-src:
+        self: true
+        unsafe-inline: true
+        sources:
+          - https://cdn.jsdelivr.net
+      img-src:
+        self: true
+        data: true
+      font-src:
+        self: true
+      manifest-src:
+        self: true

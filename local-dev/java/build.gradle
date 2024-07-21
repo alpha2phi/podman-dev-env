@@ -1,0 +1,113 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.3.0'
+	id 'io.spring.dependency-management' version '1.1.4'
+}
+
+group = 'com.cargill'
+version = project.version
+
+java {
+	sourceCompatibility = '17'
+}
+
+jar {
+	// no plain jar
+    enabled = false
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+  //modifiedDependency
+}
+
+//dependencies {
+//    // Add the original dependency to the custom configuration
+//    modifiedDependency ('Impala:ImpalaJDBC42:2.6.32.1041') {
+//        transitive = false
+//    }
+//}
+
+// Define a task to extract the JAR, remove unwanted classes, and repackage it
+//task modifyDependency(type: Zip) {
+//    dependsOn configurations.modifiedDependency
+//
+//    // Directory to extract the original JAR
+//    def extractDir = file("dist")
+//
+//    // Extract the JAR into the extract directory
+//    from {
+//        configurations.modifiedDependency.singleFile
+//    }
+//    into extractDir
+//
+//    // Remove unwanted classes from the extracted JAR
+//    doLast {
+//        delete fileTree(dir: extractDir, include: 'com/fasterxml/jackson/databind/**') // Replace this with the package or class you want to exclude
+//    }
+//
+//    // Repackage the modified classes into a new JAR
+//    from extractDir
+//    archiveFileName = "modified-ImpalaJDBC42.jar"
+//    destinationDirectory = file("dist")
+//}
+//
+// Ensure the modified dependency is built before it's used
+//tasks.withType(JavaCompile) {
+//    dependsOn modifyDependency
+//}
+
+repositories {
+	mavenCentral()
+  //maven {
+  //    url "https://repository.cloudera.com/artifactory/ext-release-local/"
+  //}
+}
+
+dependencies {
+	annotationProcessor 'org.projectlombok:lombok'
+	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+	compileOnly 'org.projectlombok:lombok'
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	implementation "org.postgresql:postgresql"
+	implementation 'org.springframework.boot:spring-boot-starter'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+  
+  // Impala JDBC
+  // implementation ( 'Impala:ImpalaJDBC42:2.6.32.1041' ){ 
+  //   transitive = false
+  // }
+  //implementation files("dist/modified-ImpalaJDBC42.jar")
+
+	// Vulnerability fixes
+	implementation 'org.yaml:snakeyaml:2.2'
+  implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.0'
+	// implementation('org.apache.tomcat.embed:tomcat-embed-core:10.1.14') 
+	// implementation('org.apache.tomcat.embed:tomcat-embed-el:10.1.14') 
+	// implementation('org.apache.tomcat.embed:tomcat-embed-websocket:10.1.14') 
+	// implementation('org.apache.tomcat:tomcat-annotations-api:10.1.14') 
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+task setHttpProxyFromEnv {
+    def map = ['HTTP_PROXY': 'http', 'HTTPS_PROXY': 'https']
+    for (e in System.getenv()) {
+        def key = e.key.toUpperCase()
+        if (key in map) {
+            def base = map[key]
+            def url = e.value.toURL()
+            println " - systemProp.${base}.proxy=${url.host}:${url.port}"
+            System.setProperty("${base}.proxyHost", url.host.toString())
+            System.setProperty("${base}.proxyPort", url.port.toString())
+        }
+    }
+}
+build.dependsOn setHttpProxyFromEnv

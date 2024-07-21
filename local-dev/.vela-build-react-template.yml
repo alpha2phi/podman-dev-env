@@ -1,0 +1,34 @@
+metadata:
+  template: true
+  # list of vars that this template can consume
+  # vars
+  # package_dir
+
+# https://go-vela.github.io/docs/templates/
+# https://go-vela.github.io/docs/templates/tutorials/go/
+# https://pkg.go.dev/text/template
+
+steps:
+
+  - name: install-react
+    image: node:lts-alpine
+    ruleset:
+      if:
+        event: [ push ]
+        branch: main
+        path: [ "react/*" ]
+    secrets: [ VELA_GITHUB_TOKEN ]
+    commands:
+      - cd react
+      - yarn install
+  - name: build-react
+    image: node:lts-alpine
+    ruleset:
+      if:
+        event: [ push ]
+        branch: main
+        path: [ "react/*" ]
+    secrets: [ VELA_GITHUB_TOKEN ]
+    commands:
+      - cd react
+      - yarn build

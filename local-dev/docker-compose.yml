@@ -1,0 +1,140 @@
+# https://stackoverflow.com/questions/50592531/setting-build-args-in-docker-compose-yml-using-env-file
+# https://stackoverflow.com/questions/78098380/make-docker-env-variables-from-an-env-file-available-in-build-step-dockerfil#:~:text=env%20available%20in%20the%20Dockerfile,that%20spawn%20from%20the%20build.
+version: "3.9"
+services:
+  postgres:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    env_file: &env-file
+      - .env
+    networks: &networks
+      - local-dev-network
+    volumes:
+      - pg-data-local:/var/lib/postgresql/data
+  adminer:
+    image: adminer:latest
+    restart: always
+    ports:
+      - "8082:8080"
+    networks: *networks
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: always
+    ports:
+      - "8081:80"
+    env_file: *env-file
+    networks: *networks
+  redis:
+    image: redis:alpine
+    logging:
+      driver: none
+    networks: *networks
+    ports:
+      - "6379:6379"
+  localstack:
+    container_name: "${LOCALSTACK_DOCKER_NAME-localstack_main}"
+    image: localstack/localstack
+    ports:
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    env_file: *env-file
+    environment:
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "./java/scripts/aws/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh"
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks: *networks
+  flyway:
+    image: flyway/flyway
+    command: -outOfOrder=true -connectRetries=60 migrate
+    # depends_on:
+    #   - postgres
+    networks: *networks
+    env_file: *env-file
+    volumes:
+      - ./java/scripts/flyway/sql:/flyway/sql
+      - ./java/scripts/flyway/flyway.conf:/flyway/conf/flyway.conf
+  local-dev-java:
+    build:
+      context: java
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      # - flyway
+      # - adminer
+      - pgadmin
+      - postgres
+      # - redis
+      # - localstack
+    env_file: *env-file
+    networks: *networks
+    volumes:
+      - ./java:/app
+  local-dev-react:
+    build:
+      context: react
+      dockerfile: Dockerfile.dev
+      args:
+        - VELA_GITHUB_TOKEN=$VELA_GITHUB_TOKEN
+    ports:
+      - "5173:5173"
+    env_file: *env-file
+    networks: *networks
+    volumes:
+      - ./react:/app
+      - /app/node_modules
+  local-dev-python:
+    build:
+      context: python
+      dockerfile: Dockerfile.dev
+      args:
+        - HTTPS_PROXY=${HTTPS_PROXY}
+        - HTTP_PROXY=${HTTP_PROXY}
+    env_file: *env-file
+    depends_on:
+      - postgres
+      - pgadmin
+      - flyway
+    networks: *networks
+    volumes:
+      - ./python:/app
+    ports:
+      - "${BACKEND_PORT:-7001}:${BACKEND_PORT:-7001}"
+    command: poetry run uvicorn main:app --reload --host 0.0.0.0 --port ${BACKEND_PORT:-7001}
+  local-dev-react-vite-ts:
+    env_file: *env-file
+    build:
+      context: react-vite-ts
+      dockerfile: Dockerfile
+      args:
+        - HTTPS_PROXY=${HTTPS_PROXY}
+        - HTTP_PROXY=${HTTP_PROXY}
+        - VITE_API_URL=https://${DOMAIN?Variable not set}
+        - NODE_ENV=local
+    # depends_on:
+    #   local-dev-python:
+    #     condition: service_healthy
+    networks: *networks
+    # develop:
+    #   watch:
+    #     - action: sync
+    #       path: ./react-vite-ts
+    #       target: /app
+    #       ignore:
+    #         - node_modules/
+    #     - action: rebuild
+    #       path: ./react-vite-ts/package.json
+    volumes:
+      - ./react-vite-ts:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+networks:
+  local-dev-network:
+    driver: bridge
+volumes:
+  pg-data-local:
