@@ -1,8 +1,0 @@
-{
-  "cloudApp": ["VO Creation"],
-  "instance": ["TC2"],
-  "transType": ["Digital"],
-  "fromDate": "20230101",
-  "toDate": "20240414",
-  "summaryType": "DAILY"
-}
