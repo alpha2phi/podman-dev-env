@@ -2,14 +2,18 @@
 # https://stackoverflow.com/questions/78098380/make-docker-env-variables-from-an-env-file-available-in-build-step-dockerfil#:~:text=env%20available%20in%20the%20Dockerfile,that%20spawn%20from%20the%20build.
 version: "3.9"
 services:
-  postgres:
-    image: postgres:latest
-    ports:
-      - "5432:5432"
+  base:
+    environment:
+      HTTP_PROXY:
+      HTTPS_PROXY:
     env_file: &env-file
       - .env
     networks: &networks
       - local-dev-network
+  postgres:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
     volumes:
       - pg-data-local:/var/lib/postgresql/data
   adminer:
@@ -23,8 +27,6 @@ services:
     restart: always
     ports:
       - "8081:80"
-    env_file: *env-file
-    networks: *networks
   redis:
     image: redis:alpine
     logging:
@@ -32,6 +34,14 @@ services:
     networks: *networks
     ports:
       - "6379:6379"
+  flyway:
+    image: flyway/flyway
+    command: -outOfOrder=true -connectRetries=60 migrate
+    depends_on:
+      - postgres
+    volumes:
+      - ./scripts/flyway/sql:/flyway/sql
+      - ./scripts/flyway/flyway.conf:/flyway/conf/flyway.conf
   localstack:
     container_name: "${LOCALSTACK_DOCKER_NAME-localstack_main}"
     image: localstack/localstack
