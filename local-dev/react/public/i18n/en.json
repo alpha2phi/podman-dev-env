@@ -1,7 +1,0 @@
-{
-    "title": "A Sample App",
-    "label": "Select another language!",
-    "about": "About",
-    "home": "Home",
-    "user": "My name is: {{name}}"
-}
