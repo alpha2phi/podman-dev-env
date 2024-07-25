@@ -6,35 +6,36 @@ services:
     environment:
       HTTP_PROXY:
       HTTPS_PROXY:
-    env_file: &env-file
+    env_file:
       - .env
-    networks: &networks
-      - local-dev-network
   postgres:
+    extends: base
     image: postgres:latest
     ports:
       - "5432:5432"
     volumes:
       - pg-data-local:/var/lib/postgresql/data
   adminer:
+    extends: base
     image: adminer:latest
     restart: always
     ports:
       - "8082:8080"
-    networks: *networks
   pgadmin:
+    extends: base
     image: dpage/pgadmin4:latest
     restart: always
     ports:
       - "8081:80"
   redis:
+    extends: base
     image: redis:alpine
     logging:
       driver: none
-    networks: *networks
     ports:
       - "6379:6379"
   flyway:
+    extends: base
     image: flyway/flyway
     command: -outOfOrder=true -connectRetries=60 migrate
     depends_on:
@@ -43,42 +44,40 @@ services:
       - ./scripts/flyway/sql:/flyway/sql
       - ./scripts/flyway/flyway.conf:/flyway/conf/flyway.conf
   localstack:
-    container_name: "${LOCALSTACK_DOCKER_NAME-localstack_main}"
+    extends: base
+    environment:
+      - SKIP_SSL_CERT_DOWNLOAD="1"
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
     image: localstack/localstack
     ports:
       - "4566:4566"
       - "4510-4559:4510-4559"
-    env_file: *env-file
-    environment:
-      - DEBUG=1
-      - DOCKER_HOST=unix:///var/run/docker.sock
     volumes:
-      - "./java/scripts/aws/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh"
-      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
-      - "/var/run/docker.sock:/var/run/docker.sock"
-    networks: *networks
-  local-dev-python:
+      - type: bind
+        source: ./scripts/localstack/init-aws.sh
+        target: /etc/localstack/init/ready.d/init-aws.sh
+  backend:
+    extends: base
     build:
       context: python
       dockerfile: Dockerfile.dev
       args:
         - HTTPS_PROXY=${HTTPS_PROXY}
         - HTTP_PROXY=${HTTP_PROXY}
-    env_file: *env-file
     depends_on:
       - postgres
       - pgadmin
       - flyway
-    networks: *networks
     volumes:
-      - ./python:/app
+      - ./backend:/app
     ports:
       - "${BACKEND_PORT:-7001}:${BACKEND_PORT:-7001}"
     command: poetry run uvicorn main:app --reload --host 0.0.0.0 --port ${BACKEND_PORT:-7001}
-  local-dev-react-vite-ts:
-    env_file: *env-file
+  frontend:
+    extends: base
     build:
-      context: react-vite-ts
+      context: frontend
       dockerfile: Dockerfile
       args:
         - HTTPS_PROXY=${HTTPS_PROXY}
@@ -88,7 +87,6 @@ services:
     # depends_on:
     #   local-dev-python:
     #     condition: service_healthy
-    networks: *networks
     # develop:
     #   watch:
     #     - action: sync
@@ -99,12 +97,9 @@ services:
     #     - action: rebuild
     #       path: ./react-vite-ts/package.json
     volumes:
-      - ./react-vite-ts:/app
+      - ./frontend:/app
       - /app/node_modules
     ports:
       - "5173:5173"
-networks:
-  local-dev-network:
-    driver: bridge
 volumes:
   pg-data-local:
