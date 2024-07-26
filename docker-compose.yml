@@ -48,7 +48,6 @@ services:
     environment:
       - SKIP_SSL_CERT_DOWNLOAD="1"
       - DEBUG=1
-      - DOCKER_HOST=unix:///var/run/docker.sock
     image: localstack/localstack
     ports:
       - "4566:4566"
@@ -95,5 +94,21 @@ services:
       - /app/node_modules
     ports:
       - "5173:5173"
+  skipper:
+    command:
+      - skipper
+      - -routes-file=/config.eskip
+    image: ghcr.io/zalando/skipper:latest
+    depends_on:
+      - frontend
+    ports:
+      - mode: ingress
+        target: 9090
+        published: "9090"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: ./scripts/skipper/config.eskip
+        target: /config.eskip
 volumes:
   pg-data-local:
