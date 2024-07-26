@@ -27,13 +27,6 @@ services:
     restart: always
     ports:
       - "8081:80"
-  redis:
-    extends: base
-    image: redis:alpine
-    logging:
-      driver: none
-    ports:
-      - "6379:6379"
   flyway:
     extends: base
     image: flyway/flyway
@@ -43,6 +36,13 @@ services:
     volumes:
       - ./scripts/flyway/sql:/flyway/sql
       - ./scripts/flyway/flyway.conf:/flyway/conf/flyway.conf
+  redis:
+    extends: base
+    image: redis:alpine
+    logging:
+      driver: none
+    ports:
+      - "6379:6379"
   localstack:
     extends: base
     environment:
@@ -75,13 +75,12 @@ services:
       - "${BACKEND_PORT:-7001}:${BACKEND_PORT:-7001}"
     command: poetry run uvicorn main:app --reload --host 0.0.0.0 --port ${BACKEND_PORT:-7001}
   frontend:
-    extends: base
     build:
       context: frontend
       dockerfile: Dockerfile
       args:
-        - HTTPS_PROXY=${HTTPS_PROXY}
-        - HTTP_PROXY=${HTTP_PROXY}
+        - DOMAIN=localhost
+        - ENVIRONMENT=local
         - VITE_API_URL=https://${DOMAIN?Variable not set}
         - NODE_ENV=local
     # depends_on:
@@ -90,12 +89,12 @@ services:
     # develop:
     #   watch:
     #     - action: sync
-    #       path: ./react-vite-ts
+    #       path: ./frontend
     #       target: /app
     #       ignore:
     #         - node_modules/
     #     - action: rebuild
-    #       path: ./react-vite-ts/package.json
+    #       path: ./frontend/package.json
     volumes:
       - ./frontend:/app
       - /app/node_modules
