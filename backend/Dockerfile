@@ -1,11 +1,6 @@
 # https://gist.github.com/usr-ein/c42d98abca3cb4632ab0c2c6aff8c88a
 FROM python:3.12-slim-bullseye AS python-base
 
-ARG APP_DIR=/python
-
-# for testing
-# ENV HTTPS_PROXY http://web.prod.proxy.cargill.com:4200
-
 ENV PYTHONUNBUFFERED=1 \
   # prevents python creating .pyc files
   PYTHONDONTWRITEBYTECODE=1 \
@@ -42,22 +37,12 @@ RUN apt-get -y update && \
 
 FROM python-base AS builder-base
 
-# for testing
-# COPY ./cacerts/*.pem /usr/local/share/ca-certificates/
-# RUN pip config set global.trusted-host "pypi.org files.pythonhosted.org pypi.python.org" && \
-#   pip install --no-cache-dir certifi && \
-#   python -c "import certifi; import glob; writer=open(certifi.where(), 'ab'); [writer.write(open(f,'rb').read()) for f in glob.glob('/usr/local/share/ca-certificates/*.pem')]; writer.close()" && \
-#   update-ca-certificates && \
-#   pip install --upgrade --no-cache-dir pip
-
-RUN --mount=type=cache,target=/root/.cache \
-  pip install --default-timeout=60 "poetry==$POETRY_VERSION"
+RUN pip install --default-timeout=60 "poetry==$POETRY_VERSION"
 
 WORKDIR $PYSETUP_PATH
 COPY $APP_DIR/poetry.lock $APP_DIR/pyproject.toml ./
 RUN poetry lock --no-update
-RUN --mount=type=cache,target=/root/.cache \
-  poetry install --no-interaction --no-ansi --only main --no-root
+RUN poetry install --no-interaction --no-ansi --only main --no-root
 
 FROM python-base as production
 ENV FASTAPI_ENV=production
@@ -68,5 +53,5 @@ RUN useradd --uid 999 --user-group --system --shell /bin/bash /app
 RUN chown -R 999 /app
 RUN chown -R 999 $PYSETUP_PATH
 USER 999
-COPY $APP_DIR/ .
+COPY . .
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7001"]

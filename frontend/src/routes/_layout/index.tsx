@@ -13,7 +13,7 @@ function Dashboard() {
     <div className="p-2">
       <h3>Dashboard</h3>
       {/* Hi, {currentUser?.name || currentUser?.email} 👋🏼 */}
-      Hi, Welcome to Your First React App! 👋🏼
+      Hi, Welcome to Your First React App again! 👋🏼
     </div>
   );
 }

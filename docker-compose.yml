@@ -31,8 +31,8 @@ services:
     extends: base
     image: flyway/flyway
     command: -outOfOrder=true -connectRetries=60 migrate
-    depends_on:
-      - postgres
+    # depends_on:
+    #   - postgres
     volumes:
       - ./scripts/flyway/sql:/flyway/sql
       - ./scripts/flyway/flyway.conf:/flyway/conf/flyway.conf
@@ -58,22 +58,21 @@ services:
         source: ./scripts/localstack/init-aws.sh
         target: /etc/localstack/init/ready.d/init-aws.sh
   backend:
-    extends: base
     build:
-      context: python
-      dockerfile: Dockerfile.dev
-      args:
-        - HTTPS_PROXY=${HTTPS_PROXY}
-        - HTTP_PROXY=${HTTP_PROXY}
-    depends_on:
-      - postgres
-      - pgadmin
-      - flyway
+      context: backend
+      dockerfile: Dockerfile
+    # depends_on:
+    #   - postgres
+    #   - pgadmin
+    #   - flyway
+    #   - redis
     volumes:
       - ./backend:/app
     ports:
-      - "${BACKEND_PORT:-7001}:${BACKEND_PORT:-7001}"
-    command: poetry run uvicorn main:app --reload --host 0.0.0.0 --port ${BACKEND_PORT:-7001}
+      - "7001:7001"
+    command: >
+      bash -c "pip install poetry
+      && poetry run uvicorn main:app --reload --host 0.0.0.0 --port 7001"
   frontend:
     build:
       context: frontend
@@ -81,9 +80,6 @@ services:
       args:
         - VITE_API_URL=http://localhost
         - NODE_ENV=local
-    # depends_on:
-    #   local-dev-python:
-    #     condition: service_healthy
     # develop:
     #   watch:
     #     - action: sync
