@@ -8,7 +8,7 @@ RUN corepack enable
 COPY . /app
 WORKDIR /app
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install
+RUN pnpm install
 EXPOSE 5173
 CMD ["pnpm", "run", "dev"]
 

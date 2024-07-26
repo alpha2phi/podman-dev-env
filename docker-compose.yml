@@ -79,9 +79,7 @@ services:
       context: frontend
       dockerfile: Dockerfile
       args:
-        - DOMAIN=localhost
-        - ENVIRONMENT=local
-        - VITE_API_URL=https://${DOMAIN?Variable not set}
+        - VITE_API_URL=http://localhost
         - NODE_ENV=local
     # depends_on:
     #   local-dev-python:
