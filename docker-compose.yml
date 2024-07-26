@@ -58,14 +58,15 @@ services:
         source: ./scripts/localstack/init-aws.sh
         target: /etc/localstack/init/ready.d/init-aws.sh
   backend:
+    extends: base
     build:
       context: backend
       dockerfile: Dockerfile
-    # depends_on:
-    #   - postgres
-    #   - pgadmin
-    #   - flyway
-    #   - redis
+    depends_on:
+      - postgres
+      - pgadmin
+      - flyway
+      - redis
     volumes:
       - ./backend:/app
     ports:

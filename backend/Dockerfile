@@ -49,9 +49,5 @@ ENV FASTAPI_ENV=production
 COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
 WORKDIR /app
 ENV PYTHONPATH=/app/app
-RUN useradd --uid 999 --user-group --system --shell /bin/bash /app 
-RUN chown -R 999 /app
-RUN chown -R 999 $PYSETUP_PATH
-USER 999
 COPY . .
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7001"]
